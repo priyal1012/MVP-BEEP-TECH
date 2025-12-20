@@ -1,0 +1,40 @@
+{
+    "Diamond": [
+        "Pompadour",
+        "SlickedBack",
+        "Fringe",
+        "Buzzcut"
+    ],
+
+    "Oblong": [
+        "Pompadour",
+        "SlickedBack"
+    ],
+
+    "Round": [
+        "Undercut",
+        "Crewcut",
+        "Fringe",
+        "SidePart"
+    ],
+
+    "Rectangular": [
+        "Crewcut",
+        "SidePart",
+        "Buzzcut"
+    ],
+
+    "Square": [
+        "Undercut",
+        "Crewcut",
+        "SidePart",
+        "Buzzcut"
+    ],
+
+    "Triangle": [
+        "Undercut",
+        "Pompadour",
+        "SlickedBack",
+        "Fringe"
+    ]
+}

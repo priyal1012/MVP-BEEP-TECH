@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try-On Beep Tech</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/Web/images/logo.png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #343a40;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .upload-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #007bff;
+            background-color: #e9f5ff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 60%;
+            margin: 10px auto;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .upload-box:hover {
+            background-color: #cce5ff;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #previewImage {
+            display: none;
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #loading {
+            display: none;
+            font-size: 22px;
+            color: #007bff;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        #faceShape {
+            display: none;
+            font-size: 22px;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 15px;
+        }
+
+        #results {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        h2 {
+            color: #343a40;
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        #hairstyleImages, #suggestedImages {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+            padding-bottom: 20px;
+        }
+
+        img.generated-img {
+            border-radius: 15px;
+            border: 3px solid #ddd;
+            transition: transform 0.3s ease-in-out;
+            width: 200px;
+        }
+
+        img.generated-img:hover {
+            transform: scale(1.1);
+        }
+
+        #suggestedHairstyles {
+            display: none;
+            font-size: 22px;
+            color: #ff6600;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Upload Your Image</h1>
+    
+    <label for="fileInput" class="upload-box">
+        <span>Click to Upload Image</span>
+        <img id="previewImage" alt="Image Preview">
+    </label>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <button onclick="uploadImage()">Upload</button>
+
+    <div id="loading">Processing... Please wait.</div>
+    <div id="faceShape"></div>
+
+    <div id="results">
+        <h2 id="suggestedHairstyles">Best Hairstyles for You</h2>
+        <div id="suggestedImages"></div>
+        <h2>All Hairstyles Available</h2>
+        <div id="hairstyleImages"></div>
+    </div>
+
+    <script>
+        document.getElementById("fileInput").addEventListener("change", function(event) {
+            var file = event.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var previewImage = document.getElementById("previewImage");
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = "block";
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function uploadImage() {
+            var file = document.getElementById("fileInput").files[0];
+            if (!file) {
+                alert("Please select an image first.");
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append("file", file);
+
+            $("#loading").show();
+            $("#results").hide();
+            $("#faceShape").hide();
+
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    $("#faceShape").text("Detected Face Shape: " + response.face_shape);
+                    $("#faceShape").show();
+                    checkProcessingStatus(response.image_name);
+                },
+                error: function() {
+                    alert("Upload failed. Please try again.");
+                    $("#loading").hide();
+                }
+            });
+        }
+
+        function checkProcessingStatus(image_name) {
+            var interval = setInterval(function() {
+                $.get("/status/" + image_name, function(response) {
+                    if (response.status === "complete") {
+                        clearInterval(interval);
+                        fetchResults(image_name);
+                    }
+                });
+            }, 5000);
+        }
+
+        function fetchResults(image_name) {
+            $.get("/results/" + image_name, function(response) {
+                $("#loading").hide();
+                $("#results").show();
+
+                var container = $("#hairstyleImages");
+                var suggestedContainer = $("#suggestedImages");
+
+                container.empty();
+                suggestedContainer.empty();
+
+                response.images.forEach(function(imgPath) {
+                    var filename = imgPath.split("/").pop();
+                    var fullUrl = `/static/results/${image_name}/` + filename;  
+
+                    var imgElement = $("<img>").attr("src", fullUrl).addClass("generated-img");
+
+                    container.append(imgElement);
+
+                    if (response.suggested.includes(filename.replace(".webp", ""))) {
+                        suggestedContainer.append(imgElement.clone());
+                    }
+                });
+
+                $("#suggestedHairstyles").show();
+            });
+        }
+    </script>
+
+</body>
+</html>
